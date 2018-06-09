@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/build"
@@ -12,6 +13,7 @@ import (
 )
 
 type fileParser struct {
+	vendor  string
 	fset    *token.FileSet
 	typeMap map[string]*ast.TypeSpec
 	nodes   []*ast.File
@@ -25,27 +27,8 @@ type param struct {
 	Location string
 }
 
-//Run does what is says on the tin
-func Run(files []string) (err error) {
-	fp, err := newParser(files)
-	if err != nil {
-		err = fmt.Errorf("error creating new parser from file: %v", err)
-		return
-	}
-	err = fp.parseComments()
-	if err != nil {
-		err = fmt.Errorf("error parsing comments: %v", err)
-		return
-	}
-	fp.createDocumentation()
-	if err != nil {
-		err = fmt.Errorf("error creating documentation: %v", err)
-		return
-	}
-	return
-}
-
-func newParser(files []string) (fp fileParser, err error) {
+func newParser(files []string, vendor string) (fp fileParser, err error) {
+	fp.vendor = vendor
 	fp.fset = token.NewFileSet()
 	fp.typeMap = make(map[string]*ast.TypeSpec)
 	visited := make(map[string]bool)
@@ -99,26 +82,15 @@ func (fp *fileParser) inspetNode(file, importName string, visited map[string]boo
 }
 
 func (fp *fileParser) readPackage(packagePath string) (files []string, err error) {
-	goroot := os.Getenv("GOROOT")
-	if goroot == "" {
-		goroot = build.Default.GOROOT
-	}
-	dir := fmt.Sprintf("%s/src/%s", goroot, packagePath)
-	fileInfo, err := ioutil.ReadDir(dir)
+	fileInfo, dir, err := fp.getFilesFromGOROOT(packagePath)
 	if err != nil {
-		// if err != os.ErrNotExist {
-		// 	err = fmt.Errorf("error reading directory %s: %v", dir, err)
-		// 	return
-		// }
-		gopath := os.Getenv("GOPATH")
-		if gopath == "" {
-			gopath = build.Default.GOPATH
-		}
-		dir = fmt.Sprintf("%s/src/%s", gopath, packagePath)
-		fileInfo, err = ioutil.ReadDir(dir)
+		fileInfo, dir, err = fp.getFilesFromVendor(packagePath)
 		if err != nil {
-			err = fmt.Errorf("error reading directory %s: %v", dir, err)
-			return
+			fileInfo, dir, err = fp.getFilesFromGOPATH(packagePath)
+			if err != nil {
+				err = fmt.Errorf("error reading package %s: %v", packagePath, err)
+				return
+			}
 		}
 	}
 	for _, f := range fileInfo {
@@ -126,6 +98,36 @@ func (fp *fileParser) readPackage(packagePath string) (files []string, err error
 			files = append(files, fmt.Sprintf("%s/%s", dir, f.Name()))
 		}
 	}
+	return
+}
+
+func (fp *fileParser) getFilesFromGOROOT(packagePath string) (fileInfo []os.FileInfo, dir string, err error) {
+	goroot := os.Getenv("GOROOT")
+	if goroot == "" {
+		goroot = build.Default.GOROOT
+	}
+	dir = fmt.Sprintf("%s/src/%s", goroot, packagePath)
+	fileInfo, err = ioutil.ReadDir(dir)
+	return
+}
+
+func (fp *fileParser) getFilesFromGOPATH(packagePath string) (fileInfo []os.FileInfo, dir string, err error) {
+	gopath := os.Getenv("GOPATH")
+	if gopath == "" {
+		gopath = build.Default.GOPATH
+	}
+	dir = fmt.Sprintf("%s/src/%s", gopath, packagePath)
+	fileInfo, err = ioutil.ReadDir(dir)
+	return
+}
+
+func (fp *fileParser) getFilesFromVendor(packagePath string) (fileInfo []os.FileInfo, dir string, err error) {
+	if len(fp.vendor) < 1 {
+		err = errors.New("Vendor dir not set")
+		return
+	}
+	dir = fmt.Sprintf("%s/%s", fp.vendor, packagePath)
+	fileInfo, err = ioutil.ReadDir(dir)
 	return
 }
 
@@ -162,11 +164,15 @@ func (fp *fileParser) createDocumentation() (err error) {
 	}
 	defer file.Close()
 	for _, ep := range fp.endpoints {
+		var method string
+		if len(ep.Method) > 0 {
+			method = fmt.Sprintf("[%s]", ep.Method)
+		}
 		if len(ep.Name) > 0 {
 			file.Write([]byte(fmt.Sprintf("## %s\n\n", ep.Name)))
-			file.Write([]byte(fmt.Sprintf("### %s\n\n", ep.Route)))
+			file.Write([]byte(fmt.Sprintf("### %s %s\n\n", ep.Route, method)))
 		} else {
-			file.Write([]byte(fmt.Sprintf("## %s\n\n", ep.Route)))
+			file.Write([]byte(fmt.Sprintf("## %s %s\n\n", ep.Route, method)))
 		}
 		file.Write([]byte(fmt.Sprintf("%s\n\n", ep.Description)))
 		file.Write([]byte(">Returns:\n\n"))

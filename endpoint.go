@@ -10,6 +10,7 @@ import (
 type endpoint struct {
 	Name        string
 	Route       string
+	Method      string
 	Returns     string
 	Description string
 	Params      []param
@@ -27,6 +28,8 @@ func (ep *endpoint) parseLine(line string, fp *fileParser) {
 	switch parts[0] {
 	case "route":
 		ep.Route = strings.TrimSpace(strings.Join(parts[1:], ""))
+	case "method":
+		ep.Method = strings.TrimSpace(strings.Join(parts[1:], ""))
 	case "description":
 		ep.Description = strings.TrimSpace(strings.Join(parts[1:], ""))
 	case "name":

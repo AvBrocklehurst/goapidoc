@@ -12,8 +12,9 @@ import (
 )
 
 type options struct {
-	File string `short:"f" long:"file" description:"Path to file to parse"`
-	Dir  string `short:"d" long:"dir" description:"Path to dir to parse"`
+	File   string `short:"f" long:"file" description:"Path to file to parse"`
+	Dir    string `short:"d" long:"dir" description:"Path to dir to parse"`
+	Vendor string `short:"v" long:"vendor" description:"Path to vendor to use"`
 }
 
 func main() {
@@ -26,9 +27,20 @@ func main() {
 	if err != nil {
 		log.Fatalf(err.Error())
 	}
-	err = Run(files)
+	fp, err := newParser(files, opts.Vendor)
 	if err != nil {
-		log.Fatalf("error running goapidoc: %v", err)
+		err = fmt.Errorf("error creating new parser from file: %v", err)
+		return
+	}
+	err = fp.parseComments()
+	if err != nil {
+		err = fmt.Errorf("error parsing comments: %v", err)
+		return
+	}
+	fp.createDocumentation()
+	if err != nil {
+		err = fmt.Errorf("error creating documentation: %v", err)
+		return
 	}
 }
 
