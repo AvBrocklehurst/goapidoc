@@ -5,16 +5,21 @@ import (
 	"fmt"
 	"io/ioutil"
 	"log"
-	"os"
 	"strings"
 
 	flags "github.com/jessevdk/go-flags"
 )
 
+type filePair struct {
+	FileName string
+	Dir      string
+}
+
 type options struct {
-	File   string `short:"f" long:"file" description:"Path to file to parse"`
-	Dir    string `short:"d" long:"dir" description:"Path to dir to parse"`
-	Vendor string `short:"v" long:"vendor" description:"Path to vendor to use"`
+	File      string `short:"f" long:"file" description:"Path to file to parse"`
+	Dir       string `short:"d" long:"dir" description:"Path to dir to parse"`
+	Vendor    string `short:"v" long:"vendor" description:"Path to vendor to use"`
+	Recursive []bool `short:"r" long:"recursive" description:"Whether to document packages in the provided dir recursively"`
 }
 
 func main() {
@@ -44,24 +49,42 @@ func main() {
 	}
 }
 
-func (opts *options) createFileList() (files []string, err error) {
+func (opts *options) createFileList() (files []filePair, err error) {
 	if len(opts.Dir) > 0 {
-		var fileInfo []os.FileInfo
-		fileInfo, err = ioutil.ReadDir(opts.Dir)
-		if err != nil {
-			err = fmt.Errorf("error reading directory %s: %v", opts.Dir, err)
-			return
-		}
-		for _, f := range fileInfo {
-			//fmt.Println(f.Name())
-			if strings.HasSuffix(f.Name(), ".go") {
-				files = append(files, fmt.Sprintf("%s/%s", opts.Dir, f.Name()))
-			}
-		}
+		files, err = parseDir(opts.Dir)
 	} else if len(opts.File) > 0 {
-		files = append(files, opts.File)
+		files = append(files, filePair{
+			FileName: opts.File,
+			Dir:      "",
+		})
 	} else {
 		err = errors.New("either a directory or file must be provided")
+	}
+	return
+}
+
+func parseDir(dir string) (files []filePair, err error) {
+	fileInfo, err := ioutil.ReadDir(dir)
+	if err != nil {
+		err = fmt.Errorf("error reading directory %s: %v", dir, err)
+		return
+	}
+	for _, f := range fileInfo {
+		fmt.Println(f.Name())
+		if f.IsDir() {
+			var temp []filePair
+			temp, err = parseDir(f.Name())
+			if err != nil {
+				return
+			}
+			files = append(files, temp...)
+		}
+		if strings.HasSuffix(f.Name(), ".go") {
+			files = append(files, filePair{
+				FileName: fmt.Sprintf("%s/%s", dir, f.Name()),
+				Dir:      dir,
+			})
+		}
 	}
 	return
 }

@@ -16,9 +16,14 @@ type fileParser struct {
 	vendor  string
 	fset    *token.FileSet
 	typeMap map[string]*ast.TypeSpec
-	nodes   []*ast.File
+	nodes   []nodePair
 
 	endpoints []endpoint
+}
+
+type nodePair struct {
+	Node *ast.File
+	Dir  string
 }
 
 type param struct {
@@ -27,7 +32,7 @@ type param struct {
 	Location string
 }
 
-func newParser(files []string, vendor string) (fp fileParser, err error) {
+func newParser(files []filePair, vendor string) (fp fileParser, err error) {
 	fp.vendor = vendor
 	fp.fset = token.NewFileSet()
 	fp.typeMap = make(map[string]*ast.TypeSpec)
@@ -38,17 +43,20 @@ func newParser(files []string, vendor string) (fp fileParser, err error) {
 		if err != nil {
 			return
 		}
-		fp.nodes = append(fp.nodes, node)
+		fp.nodes = append(fp.nodes, nodePair{
+			Node: node,
+			Dir:  file.Dir,
+		})
 	}
 	return
 }
 
-func (fp *fileParser) inspetNode(file, importName string, visited map[string]bool) (node *ast.File, err error) {
-	node, err = parser.ParseFile(fp.fset, file, nil, parser.ParseComments)
+func (fp *fileParser) inspetNode(file filePair, importName string, visited map[string]bool) (node *ast.File, err error) {
+	node, err = parser.ParseFile(fp.fset, file.FileName, nil, parser.ParseComments)
 	if err != nil {
 		return
 	}
-	var files []string
+	var files []filePair
 	for _, i := range node.Imports {
 		name := i.Path.Value[1 : len(i.Path.Value)-1]
 		if ok := visited[name]; !ok {
@@ -81,7 +89,7 @@ func (fp *fileParser) inspetNode(file, importName string, visited map[string]boo
 	return
 }
 
-func (fp *fileParser) readPackage(packagePath string) (files []string, err error) {
+func (fp *fileParser) readPackage(packagePath string) (files []filePair, err error) {
 	fileInfo, dir, err := fp.getFilesFromGOROOT(packagePath)
 	if err != nil {
 		fileInfo, dir, err = fp.getFilesFromVendor(packagePath)
@@ -95,7 +103,11 @@ func (fp *fileParser) readPackage(packagePath string) (files []string, err error
 	}
 	for _, f := range fileInfo {
 		if strings.HasSuffix(f.Name(), ".go") {
-			files = append(files, fmt.Sprintf("%s/%s", dir, f.Name()))
+			parts := strings.Split(dir, "/")
+			files = append(files, filePair{
+				FileName: fmt.Sprintf("%s/%s", dir, f.Name()),
+				Dir:      parts[len(parts)-1],
+			})
 		}
 	}
 	return
@@ -132,8 +144,8 @@ func (fp *fileParser) getFilesFromVendor(packagePath string) (fileInfo []os.File
 }
 
 func (fp *fileParser) parseComments() (err error) {
-	for _, node := range fp.nodes {
-		for _, f := range node.Decls {
+	for _, np := range fp.nodes {
+		for _, f := range np.Node.Decls {
 			fn, ok := f.(*ast.FuncDecl)
 			if !ok {
 				continue
