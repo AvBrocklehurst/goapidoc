@@ -4,9 +4,9 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"strings"
 
+	"github.com/golang/glog"
 	flags "github.com/jessevdk/go-flags"
 )
 
@@ -26,26 +26,23 @@ func main() {
 	var opts options
 	_, err := flags.Parse(&opts)
 	if err != nil {
-		log.Fatalf("error parsing flags: %v", err)
+		glog.Fatalf("error parsing flags: %v", err)
 	}
 	files, err := opts.createFileList()
 	if err != nil {
-		log.Fatalf(err.Error())
+		glog.Fatalf(err.Error())
 	}
 	fp, err := newParser(files, opts.Vendor)
 	if err != nil {
-		err = fmt.Errorf("error creating new parser from file: %v", err)
-		return
+		glog.Fatalf("error creating new parser from file: %v", err)
 	}
 	err = fp.parseComments()
 	if err != nil {
-		err = fmt.Errorf("error parsing comments: %v", err)
-		return
+		glog.Fatalf("error parsing comments: %v", err)
 	}
 	fp.createDocumentation()
 	if err != nil {
-		err = fmt.Errorf("error creating documentation: %v", err)
-		return
+		glog.Fatalf("error creating documentation: %v", err)
 	}
 }
 
@@ -75,7 +72,7 @@ func parseDir(dir string) (files []filePair, err error) {
 			var temp []filePair
 			temp, err = parseDir(f.Name())
 			if err != nil {
-				return
+				glog.Errorf("error parsing dir %s (non-fatal): %v", f.Name(), err)
 			}
 			files = append(files, temp...)
 		}
