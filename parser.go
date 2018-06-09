@@ -174,17 +174,22 @@ func (fp *fileParser) createDocumentation() (err error) {
 		} else {
 			file.Write([]byte(fmt.Sprintf("## %s %s\n\n", ep.Route, method)))
 		}
-		file.Write([]byte(fmt.Sprintf("%s\n\n", ep.Description)))
-		file.Write([]byte(">Returns:\n\n"))
-		file.Write([]byte(fmt.Sprintf("```Go\n%s\n```\n\n", ep.Returns)))
-
-		file.Write([]byte("### Params\n\n"))
-		file.Write([]byte("Name | Type | Location\n"))
-		file.Write([]byte("---- | ---- | --------\n"))
-		for _, p := range ep.Params {
-			file.Write([]byte(fmt.Sprintf("%s | %s | %s\n", p.Name, p.Type, p.Location)))
+		if len(ep.Description) > 0 {
+			file.Write([]byte(fmt.Sprintf("%s\n\n", ep.Description)))
 		}
-		file.Write([]byte("\n"))
+		if len(ep.Returns) > 0 {
+			file.Write([]byte(">Returns:\n\n"))
+			file.Write([]byte(fmt.Sprintf("```Go\n%s\n```\n\n", ep.Returns)))
+		}
+		if len(ep.Params) > 0 {
+			file.Write([]byte("### Params\n\n"))
+			file.Write([]byte("Name | Type | Location\n"))
+			file.Write([]byte("---- | ---- | --------\n"))
+			for _, p := range ep.Params {
+				file.Write([]byte(fmt.Sprintf("%s | %s | %s\n", p.Name, p.Type, p.Location)))
+			}
+			file.Write([]byte("\n"))
+		}
 	}
 	return
 }
