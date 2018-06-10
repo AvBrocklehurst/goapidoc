@@ -67,7 +67,6 @@ func parseDir(dir string) (files []filePair, err error) {
 		return
 	}
 	for _, f := range fileInfo {
-		fmt.Println(f.Name())
 		if f.IsDir() {
 			var temp []filePair
 			temp, err = parseDir(f.Name())
@@ -83,5 +82,6 @@ func parseDir(dir string) (files []filePair, err error) {
 			})
 		}
 	}
+	err = nil
 	return
 }
