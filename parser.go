@@ -180,6 +180,8 @@ func (fp *fileParser) createDocumentation() (err error) {
 	}
 	defer file.Close()
 	for name, dir := range fp.endpoints {
+		//TODO pretty format this
+		//TODO add flag to make this optional
 		file.Write([]byte(fmt.Sprintf("# %s\n", name)))
 		for _, ep := range dir {
 			var method string

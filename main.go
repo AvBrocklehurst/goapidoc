@@ -69,7 +69,11 @@ func parseDir(dir string) (files []filePair, err error) {
 	for _, f := range fileInfo {
 		if f.IsDir() {
 			var temp []filePair
-			temp, err = parseDir(f.Name())
+			name := f.Name()
+			if len(dir) > 0 {
+				name = fmt.Sprintf("%s/%s", dir, f.Name())
+			}
+			temp, err = parseDir(name)
 			if err != nil {
 				glog.Errorf("error parsing dir %s (non-fatal): %v", f.Name(), err)
 			}
