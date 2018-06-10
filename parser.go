@@ -18,7 +18,7 @@ type fileParser struct {
 	typeMap map[string]*ast.TypeSpec
 	nodes   []nodePair
 
-	endpoints []endpoint
+	endpoints map[string][]endpoint
 }
 
 type nodePair struct {
@@ -36,6 +36,7 @@ func newParser(files []filePair, vendor string) (fp fileParser, err error) {
 	fp.vendor = vendor
 	fp.fset = token.NewFileSet()
 	fp.typeMap = make(map[string]*ast.TypeSpec)
+	fp.endpoints = make(map[string][]endpoint)
 	visited := make(map[string]bool)
 	var node *ast.File
 	for _, file := range files {
@@ -59,7 +60,7 @@ func (fp *fileParser) inspetNode(file filePair, importName string, visited map[s
 	var files []filePair
 	for _, i := range node.Imports {
 		name := i.Path.Value[1 : len(i.Path.Value)-1]
-		if ok := visited[name]; !ok {
+		if _, ok := visited[name]; !ok {
 			visited[name] = true
 			files, err = fp.readPackage(name)
 			if err != nil {
@@ -151,7 +152,10 @@ func (fp *fileParser) parseComments() (err error) {
 				continue
 			}
 			if ep, valid := fp.parseComment(fn.Doc.Text()); valid {
-				fp.endpoints = append(fp.endpoints, ep)
+				if _, ok := fp.endpoints[np.Dir]; !ok {
+					fp.endpoints[np.Dir] = make([]endpoint, 0)
+				}
+				fp.endpoints[np.Dir] = append(fp.endpoints[np.Dir], ep)
 			}
 		}
 	}
@@ -175,32 +179,35 @@ func (fp *fileParser) createDocumentation() (err error) {
 		return
 	}
 	defer file.Close()
-	for _, ep := range fp.endpoints {
-		var method string
-		if len(ep.Method) > 0 {
-			method = fmt.Sprintf("[%s]", ep.Method)
-		}
-		if len(ep.Name) > 0 {
-			file.Write([]byte(fmt.Sprintf("## %s\n\n", ep.Name)))
-			file.Write([]byte(fmt.Sprintf("### %s %s\n\n", ep.Route, method)))
-		} else {
-			file.Write([]byte(fmt.Sprintf("## %s %s\n\n", ep.Route, method)))
-		}
-		if len(ep.Description) > 0 {
-			file.Write([]byte(fmt.Sprintf("%s\n\n", ep.Description)))
-		}
-		if len(ep.Returns) > 0 {
-			file.Write([]byte(">Returns:\n\n"))
-			file.Write([]byte(fmt.Sprintf("```Go\n%s\n```\n\n", ep.Returns)))
-		}
-		if len(ep.Params) > 0 {
-			file.Write([]byte("### Params\n\n"))
-			file.Write([]byte("Name | Type | Location\n"))
-			file.Write([]byte("---- | ---- | --------\n"))
-			for _, p := range ep.Params {
-				file.Write([]byte(fmt.Sprintf("%s | %s | %s\n", p.Name, p.Type, p.Location)))
+	for name, dir := range fp.endpoints {
+		file.Write([]byte(fmt.Sprintf("# %s\n", name)))
+		for _, ep := range dir {
+			var method string
+			if len(ep.Method) > 0 {
+				method = fmt.Sprintf("[%s]", ep.Method)
 			}
-			file.Write([]byte("\n"))
+			if len(ep.Name) > 0 {
+				file.Write([]byte(fmt.Sprintf("## %s\n\n", ep.Name)))
+				file.Write([]byte(fmt.Sprintf("### %s %s\n\n", ep.Route, method)))
+			} else {
+				file.Write([]byte(fmt.Sprintf("## %s %s\n\n", ep.Route, method)))
+			}
+			if len(ep.Description) > 0 {
+				file.Write([]byte(fmt.Sprintf("%s\n\n", ep.Description)))
+			}
+			if len(ep.Returns) > 0 {
+				file.Write([]byte(">Returns:\n\n"))
+				file.Write([]byte(fmt.Sprintf("```Go\n%s\n```\n\n", ep.Returns)))
+			}
+			if len(ep.Params) > 0 {
+				file.Write([]byte("### Params\n\n"))
+				file.Write([]byte("Name | Type | Location\n"))
+				file.Write([]byte("---- | ---- | --------\n"))
+				for _, p := range ep.Params {
+					file.Write([]byte(fmt.Sprintf("%s | %s | %s\n", p.Name, p.Type, p.Location)))
+				}
+				file.Write([]byte("\n"))
+			}
 		}
 	}
 	return

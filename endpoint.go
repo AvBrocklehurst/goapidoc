@@ -13,6 +13,7 @@ type endpoint struct {
 	Method      string
 	Returns     string
 	Description string
+	Dir         string
 	Params      []param
 }
 
