@@ -60,6 +60,11 @@ func (ep *endpoint) parseParam(parts []string) {
 
 func (ep *endpoint) parseReturns(parts []string, fp *fileParser) {
 	content := strings.TrimSpace(strings.Join(parts[1:], ""))
+	slice := false
+	if strings.HasPrefix(content, "[]") {
+		content = strings.TrimPrefix(content, "[]")
+		slice = true
+	}
 	if v, ok := fp.typeMap[content]; ok {
 		//TODO loads of checking here to build good return
 		// if s, ok := v.Type.(*ast.StructType); ok {
@@ -81,7 +86,13 @@ func (ep *endpoint) parseReturns(parts []string, fp *fileParser) {
 		var buf bytes.Buffer
 		printer.Fprint(&buf, fp.fset, v)
 		ep.Returns = buf.String()
+		if slice {
+			ep.Returns = "[]" + ep.Returns
+		}
 		return
+	}
+	if slice {
+		content = "[]" + content
 	}
 	ep.Returns = content
 }

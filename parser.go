@@ -182,7 +182,7 @@ func (fp *fileParser) createDocumentation() (err error) {
 	for name, dir := range fp.endpoints {
 		//TODO pretty format this
 		//TODO add flag to make this optional
-		file.Write([]byte(fmt.Sprintf("# %s\n", name)))
+		file.Write([]byte(fmt.Sprintf("# %s\n", strings.TrimPrefix(name, "./"))))
 		for _, ep := range dir {
 			var method string
 			if len(ep.Method) > 0 {
