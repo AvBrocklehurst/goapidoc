@@ -1,0 +1,27 @@
+<!doctype html>
+
+<html lang="en">
+
+<head>
+	<meta charset="utf-8">
+	<title>Go API Docs</title>
+	<meta name="description" content="Documentation produced by goapidoc">
+</head>
+
+<body>
+	<h1>{{.Title}}</h1>
+	{{range .Endpoints}} 
+		<div class="service">
+			{{range .Endpoints}} 
+				<h1>{{.Name}}</h1>
+			{{end}}
+		</div>
+	{{end}}
+</body>
+
+
+<style>
+
+</style>
+
+</html>

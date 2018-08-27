@@ -173,7 +173,7 @@ func (fp *fileParser) parseComment(text string) (ep endpoint, valid bool) {
 	return
 }
 
-func (fp *fileParser) createDocumentation() (err error) {
+func (fp *fileParser) createMarkdownDocumentation() (err error) {
 	file, err := os.Create("documentation.md")
 	if err != nil {
 		return
@@ -213,4 +213,11 @@ func (fp *fileParser) createDocumentation() (err error) {
 		}
 	}
 	return
+}
+
+func (fp *fileParser) createDocumentation(opts options) (err error) {
+	if opts.HTML {
+		return fp.createHTMLDocumentation(opts.Title)
+	}
+	return fp.createMarkdownDocumentation()
 }

@@ -20,6 +20,8 @@ type options struct {
 	Dir       string `short:"d" long:"dir" description:"Path to dir to parse"`
 	Vendor    string `short:"v" long:"vendor" description:"Path to vendor to use"`
 	Recursive []bool `short:"r" long:"recursive" description:"Whether to document packages in the provided dir recursively"`
+	HTML      bool   `short:"m" long:"html" description:"Whether to return docs as HTML. Default is false (markdown)"`
+	Title     string `short:"t" long:"title" description:"Title for API documentation"`
 }
 
 func main() {
@@ -40,7 +42,7 @@ func main() {
 	if err != nil {
 		glog.Fatalf("error parsing comments: %v", err)
 	}
-	fp.createDocumentation()
+	err = fp.createDocumentation(opts)
 	if err != nil {
 		glog.Fatalf("error creating documentation: %v", err)
 	}
