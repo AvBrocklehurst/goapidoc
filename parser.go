@@ -27,9 +27,10 @@ type nodePair struct {
 }
 
 type param struct {
-	Name     string
-	Type     string
-	Location string
+	Name        string
+	Type        string
+	Location    string
+	Description string
 }
 
 func newParser(files []filePair, vendor string) (fp fileParser, err error) {

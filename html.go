@@ -54,6 +54,7 @@ const documentationHTMLTemplate = `
 										<th>Name</th>
 										<th>Type</th>
 										<th>Location</th>
+										<th>Description</th>
 									</tr>
 								</thead>
 								<tbody>
@@ -62,6 +63,7 @@ const documentationHTMLTemplate = `
 										<td>{{ $param.Name }}</td>
 										<td>{{ $param.Type }}</td>
 										<td>{{ $param.Location }}</td>
+										<td>{{ $param.Description }}</td>
 									</tr>
 									{{ end }}
 								</tbody>
