@@ -46,14 +46,14 @@ func (ep *endpoint) parseLine(line string, fp *fileParser) {
 func (ep *endpoint) parseParam(parts []string) {
 	var p param
 	parts = strings.Split(strings.TrimSpace(parts[1]), " ")
-	if len(parts) > 2 {
-		p.Name = strings.TrimSpace(parts[0])
-		p.Type = parts[1]
-		p.Location = parts[2]
-	} else {
-		p.Name = "-"
-		p.Type = parts[0]
-		p.Location = parts[1]
+	if len(parts) < 3 {
+		return
+	}
+	p.Name = strings.TrimSpace(parts[0])
+	p.Type = parts[1]
+	p.Location = parts[2]
+	if len(parts) > 3 {
+		p.Description = strings.Join(parts[3:], " ")
 	}
 	ep.Params = append(ep.Params, p)
 }
